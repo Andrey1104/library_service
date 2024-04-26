@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 from django.db.models import Count, F, ExpressionWrapper, IntegerField, Q
 
@@ -51,3 +53,15 @@ class Borrowing(models.Model):
     actual_return_date = models.DateField(auto_now=True)
     book = models.ForeignKey(Book, on_delete=models.CASCADE)
     user = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE)
+
+    @property
+    def borrowing_days(self) -> int:
+        return (self.actual_return_date - self.borrow_date).days
+
+    @property
+    def payable(self) -> Decimal:
+        return Decimal(self.borrowing_days * self.book.daily_fee)
+    
+    @property
+    def expiated(self) -> bool:
+        return self.expected_return_date < self.actual_return_date
