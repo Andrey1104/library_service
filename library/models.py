@@ -1,7 +1,7 @@
-from decimal import Decimal
+from datetime import date, timedelta
 
 from django.db import models
-from django.db.models import Count, F, ExpressionWrapper, IntegerField, Q
+from rest_framework.exceptions import ValidationError
 
 from library_service.settings import AUTH_USER_MODEL
 
@@ -24,44 +24,36 @@ class Book(models.Model):
     def __str__(self):
         return self.title
 
-    @property
-    def free(self):
-        available_books_count = (
-            Book.objects.annotate(
-                borrowed_count=Count(
-                    "borrowing",
-                    filter=~Q(borrowing__actual_return_date__isnull=True)
-                )
-            )
-            .annotate(
-                available_inventory=ExpressionWrapper(
-                    F("inventory") - F("borrowed_count"),
-                    output_field=IntegerField()
-                )
-            )
-            .values_list("title", "available_inventory")
-        )
-        return available_books_count.filter(
-            title=self.title,
-            author=self.author
-        ).values_list("available_inventory", flat=True).first()
-
 
 class Borrowing(models.Model):
     borrow_date = models.DateField(auto_now_add=True)
     expected_return_date = models.DateField()
-    actual_return_date = models.DateField(auto_now=True)
+    actual_return_date = models.DateField(null=True, blank=True)
     book = models.ForeignKey(Book, on_delete=models.CASCADE)
     user = models.ForeignKey(AUTH_USER_MODEL, on_delete=models.CASCADE)
 
-    @property
-    def borrowing_days(self) -> int:
-        return (self.actual_return_date - self.borrow_date).days
+    def clean(self):
+        if not self.borrow_date:
+            self.borrow_date = date.today()
+        if self.borrow_date >= self.expected_return_date:
+            raise ValidationError("Expected return date must be after borrow date")
+        if self.actual_return_date and self.actual_return_date < self.borrow_date:
+            raise ValidationError("Actual return date must be after borrow date")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        return super().save(*args, **kwargs)
 
     @property
-    def payable(self) -> Decimal:
-        return Decimal(self.borrowing_days * self.book.daily_fee)
+    def overdue_days(self) -> int:
+        return (self.actual_return_date - self.expected_return_date).days - 1
+
+    @property
+    def borrow_days(self) -> int:
+        return (self.expected_return_date - self.borrow_date).days
     
     @property
     def expiated(self) -> bool:
+        if not self.actual_return_date:
+            self.actual_return_date = date.today()
         return self.expected_return_date < self.actual_return_date
