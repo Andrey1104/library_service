@@ -1,9 +1,14 @@
-from aiogram import Dispatcher, html
+import asyncio
+
+from aiogram import Dispatcher, html, Bot
+from aiogram.client.default import DefaultBotProperties
+from aiogram.enums import ParseMode
 from aiogram.utils.deep_linking import decode_payload
 from aiogram.filters import CommandStart, CommandObject
 from aiogram.types import Message
 from asgiref.sync import sync_to_async
 
+from library_service.settings import TOKEN
 from user.models import User
 
 dp = Dispatcher()
@@ -34,3 +39,17 @@ async def handler(message: Message, command: CommandObject):
         )
     else:
         await message.answer("You don't have any notifications.")
+
+
+def send_message(message: str, chat_id: int) -> None:
+    bot = Bot(
+        token=TOKEN,
+        default=DefaultBotProperties(parse_mode=ParseMode.HTML)
+    )
+    try:
+        asyncio.run(bot.send_message(
+            chat_id=chat_id,
+            text=message
+        ))
+    except Exception as error:
+        print(error)
