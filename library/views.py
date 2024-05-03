@@ -1,5 +1,6 @@
 from datetime import date
 
+from django.shortcuts import redirect
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
@@ -14,6 +15,7 @@ from library.serializers import BookSerializer, BorrowingSerializer, BorrowingLi
 from library_service.settings import FINE_COEFFICIENT
 from payment.models import Payment
 from payment.views import create_stripe_session
+from utils.telegram_bot import send_message
 
 
 class BookViewSet(viewsets.ModelViewSet):
@@ -60,17 +62,22 @@ class BorrowingViewSet(
 
     def create(self, request, *args, **kwargs):
         book = Book.objects.get(id=request.data.get("book"))
-        email = self.request.user.email
+        user = self.request.user
         return_date = request.data.get("expected_return_date")
 
-        text = f"New borrowing by {email}\nTook \"{book}\" book\nExpected return on {return_date}"
-        # send_borrowing_info(text)
+        text = (
+            f"You have new borrowing \n"
+            f"Took \"{book}\" book.\n"
+            f"Expected return on {return_date}.\n"
+            f"Daily fee: {book.daily_fee} $"
+        )
+        send_message(chat_id=user.telegram_id, message=text)
 
         return super().create(request, *args, **kwargs)
 
     @staticmethod
     def calculate_payable(borrowing, request):
-        payment_type = "PAID"
+        payment_type = "PAYMENT"
         payable = (date.today() - borrowing.borrow_date).days * borrowing.book.daily_fee
         if borrowing.expiated:
             payment_type = "FINE"
@@ -87,8 +94,10 @@ class BorrowingViewSet(
             session_id=request.session.session_key,
             money_to_pay=payable
         )
-        payment.save()
-        create_stripe_session(payment)
+        # payment.save()
+        # create_stripe_session(payment)
+
+        return payment
 
     @action(
         methods=["POST"],
@@ -99,18 +108,20 @@ class BorrowingViewSet(
     def return_borrowing(self, request, pk=None):
         borrowing = get_object_or_404(Borrowing, pk=pk)
 
-        if borrowing.actual_return_date:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
+        # if borrowing.actual_return_date:
+        #     return Response(status=status.HTTP_400_BAD_REQUEST)
+        #
+        # borrowing.actual_return_date = date.today()
+        # borrowing.book.inventory += 1
 
-        borrowing.actual_return_date = date.today()
-        borrowing.book.inventory += 1
+        payment = self.calculate_payable(borrowing, request)
 
-        self.calculate_payable(borrowing, request)
+        # borrowing.save()
+        # borrowing.book.save()
 
-        borrowing.save()
-        borrowing.book.save()
-
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        # return Response(status=status.HTTP_204_NO_CONTENT)
+        return create_stripe_session(payment)
+        # return redirect(url, status=status.HTTP_307_TEMPORARY_REDIRECT)
 
     @extend_schema(
         parameters=[
