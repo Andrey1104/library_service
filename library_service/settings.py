@@ -45,6 +45,7 @@ INSTALLED_APPS = [
     "drf_spectacular",
     "rest_framework_swagger",
     "rest_framework_simplejwt",
+    "corsheaders",
     "debug_toolbar",
     "library",
     "payment",
@@ -182,3 +183,8 @@ STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
 
 TOKEN = os.getenv("TELEGRAM_TOKEN")
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5173",
+    "https://checkout.stripe.com",
+]
