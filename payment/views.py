@@ -1,8 +1,12 @@
 import stripe
+from django.shortcuts import redirect
+from rest_framework import status
+from rest_framework.decorators import action
 
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.viewsets import ModelViewSet, GenericViewSet
+from rest_framework.response import Response
+from rest_framework.viewsets import GenericViewSet
 
 from library_service.settings import STRIPE_SECRET_KEY
 from payment.models import Payment
@@ -28,6 +32,21 @@ class PaymentViewSet(ListAPIView, RetrieveAPIView, GenericViewSet):
 
         return self.serializer_class
 
+    @action(detail=False, methods=['get'], url_path="status",)
+    def check_payment_status(self, request):
+        """
+        Task to create a post.
+        """
+        payments = Payment.objects.filter(status="PENDING")
+        if payments:
+            for payment in payments:
+                payment_session = stripe.checkout.Session.retrieve(
+                    id=payment.session_id
+                )
+                status1 = payment_session.payment_status
+                print(status1)
+        return Response(status=status.HTTP_200_OK)
+
 
 def create_stripe_session(payment: Payment):
     checkout_session = stripe.checkout.Session.create(
@@ -46,7 +65,7 @@ def create_stripe_session(payment: Payment):
         ],
         metadata={"book_id": payment.borrowing.book.id},
         mode="payment",
-        success_url='http://localhost:8800/api/payment',
+        success_url='http://localhost:8800/api/payments',
         cancel_url='http://localhost:8800/api/',
         customer_email=payment.borrowing.user.email
     )
@@ -55,4 +74,4 @@ def create_stripe_session(payment: Payment):
     payment.session_id = checkout_session.id
     payment.save()
 
-    return payment
+    return redirect(checkout_session.url, status=status.HTTP_307_TEMPORARY_REDIRECT)
