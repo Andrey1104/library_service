@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, date
 
 import stripe
 from celery import shared_task
@@ -28,14 +28,20 @@ def overdue_notification():
 
 @shared_task
 def check_payment_status():
-    """
-    Task to create a post.
-    """
     payments = Payment.objects.filter(status="PENDING")
     if payments:
         for payment in payments:
             payment_session = stripe.checkout.Session.retrieve(
                 id=payment.session_id
             )
-            status = payment_session.payment_status
-            print(status)
+            payment_status = payment_session.payment_status
+            if payment_status == "paid":
+                payment.status = "PAID"
+                payment.borrowing.actual_return_date = date.today()
+                payment.save()
+                text = (
+                    f"Your payment for the book "
+                    f"{payment.borrowing.book.title}"
+                    f"has been received!"
+                )
+                send_message(message=text, chat_id=payment.user.telegram_id)

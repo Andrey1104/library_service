@@ -1,5 +1,6 @@
+from datetime import date
+
 import stripe
-from django.shortcuts import redirect
 from rest_framework import status
 from rest_framework.decorators import action
 
@@ -8,9 +9,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
+from library.tasks import check_payment_status
 from library_service.settings import STRIPE_SECRET_KEY
 from payment.models import Payment
 from payment.serializers import PaymentSerializer, PaymentDetailSerializer
+from utils.telegram_bot import send_message
 
 stripe.api_key = STRIPE_SECRET_KEY
 
@@ -32,19 +35,9 @@ class PaymentViewSet(ListAPIView, RetrieveAPIView, GenericViewSet):
 
         return self.serializer_class
 
-    @action(detail=False, methods=['get'], url_path="status",)
-    def check_payment_status(self, request):
-        """
-        Task to create a post.
-        """
-        payments = Payment.objects.filter(status="PENDING")
-        if payments:
-            for payment in payments:
-                payment_session = stripe.checkout.Session.retrieve(
-                    id=payment.session_id
-                )
-                status1 = payment_session.payment_status
-                print(status1)
+    @action(detail=False, methods=['get'], url_path="success",)
+    def success(self, request):
+        check_payment_status()
         return Response(status=status.HTTP_200_OK)
 
 
@@ -65,8 +58,8 @@ def create_stripe_session(payment: Payment):
         ],
         metadata={"book_id": payment.borrowing.book.id},
         mode="payment",
-        success_url='http://localhost:8800/api/payments',
-        cancel_url='http://localhost:8800/api/',
+        success_url='http://localhost:8000/api/success/',
+        cancel_url='http://localhost:8000/api/borrowings/',
         customer_email=payment.borrowing.user.email
     )
 
@@ -74,4 +67,5 @@ def create_stripe_session(payment: Payment):
     payment.session_id = checkout_session.id
     payment.save()
 
-    return redirect(checkout_session.url, status=status.HTTP_307_TEMPORARY_REDIRECT)
+    return checkout_session
+

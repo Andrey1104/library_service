@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "corsheaders",
     "debug_toolbar",
+    "django_celery_beat",
     "library",
     "payment",
     "user",
@@ -149,8 +150,8 @@ REST_FRAMEWORK = {
 }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Social media service API",
-    "DESCRIPTION": "Opportunity to make new friends and keep a life journal",
+    "TITLE": "Library service API",
+    "DESCRIPTION": "Opportunity to borrow book from the library",
     "VERSION": "1.0.0",
     "SERVE_INCLUDE_SCHEMA": False,
     "SWAGGER_UI_SETTINGS": {
@@ -174,9 +175,9 @@ FINE_COEFFICIENT = 2
 
 CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
 CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
-CELERY_TIMEZONE = "UTC"
+CELERY_TIMEZONE = "Europe/Kiev"
 CELERY_TASK_TRACKER_STARTED = True
-CELERY_TASK_TIME_LIMIT = 30 * 60
+CELERY_TASK_TIME_LIMIT = 10 * 60
 
 
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
@@ -187,4 +188,6 @@ TOKEN = os.getenv("TELEGRAM_TOKEN")
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",
     "https://checkout.stripe.com",
+    "https://stripe.com",
+    "https://t.me",
 ]
