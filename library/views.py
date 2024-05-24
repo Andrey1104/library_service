@@ -1,5 +1,6 @@
 from datetime import date
 
+import stripe
 from django.shortcuts import redirect
 from drf_spectacular.utils import extend_schema, OpenApiParameter
 from rest_framework import viewsets, status
@@ -7,12 +8,11 @@ from rest_framework.decorators import action
 from rest_framework.generics import get_object_or_404
 from rest_framework.mixins import CreateModelMixin, ListModelMixin, RetrieveModelMixin
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
 from library.models import Book, Borrowing
 from library.serializers import BookSerializer, BorrowingSerializer, BorrowingListSerializer
-from library_service.settings import FINE_COEFFICIENT
+from library_service.settings import FINE_COEFFICIENT, STRIPE_SECRET_KEY
 from payment.models import Payment
 from payment.views import create_stripe_session
 from utils.telegram_bot import send_message
@@ -91,37 +91,26 @@ class BorrowingViewSet(
             type=payment_type,
             borrowing_id=borrowing.id,
             session_url=request.build_absolute_uri(),
-            session_id=request.session.session_key,
+            session_id="None",
             money_to_pay=payable
         )
-        # payment.save()
-        # create_stripe_session(payment)
 
         return payment
 
     @action(
-        methods=["POST"],
+        methods=["GET"],
         detail=True,
         url_path="return",
         permission_classes=[IsAuthenticated]
     )
     def return_borrowing(self, request, pk=None):
         borrowing = get_object_or_404(Borrowing, pk=pk)
-
-        # if borrowing.actual_return_date:
-        #     return Response(status=status.HTTP_400_BAD_REQUEST)
-        #
-        # borrowing.actual_return_date = date.today()
-        # borrowing.book.inventory += 1
-
         payment = self.calculate_payable(borrowing, request)
 
-        # borrowing.save()
-        # borrowing.book.save()
+        stripe.api_key = STRIPE_SECRET_KEY
+        checkout_session = create_stripe_session(payment)
 
-        # return Response(status=status.HTTP_204_NO_CONTENT)
-        return create_stripe_session(payment)
-        # return redirect(url, status=status.HTTP_307_TEMPORARY_REDIRECT)
+        return redirect(checkout_session.url, status=status.HTTP_307_TEMPORARY_REDIRECT)
 
     @extend_schema(
         parameters=[
