@@ -1,6 +1,9 @@
+from __future__ import absolute_import, unicode_literals
+
 import os
 
 from celery import Celery
+from celery.schedules import crontab
 
 os.environ.setdefault(
     "DJANGO_SETTINGS_MODULE", "library_service.settings"
@@ -11,6 +14,13 @@ app = Celery("library_service")
 app.config_from_object("django.conf:settings", namespace="CELERY")
 
 app.autodiscover_tasks()
+
+app.conf.beat_schedule = {
+    "run-every-morning": {
+        "task": "library.tasks.overdue_notification",
+        "schedule": crontab(minute="0", hour="9"),
+    },
+}
 
 
 @app.task(bind=True, ignore_result=True)
