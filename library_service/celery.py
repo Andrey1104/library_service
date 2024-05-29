@@ -18,7 +18,7 @@ app.autodiscover_tasks()
 app.conf.beat_schedule = {
     "run-every-morning": {
         "task": "library.tasks.overdue_notification",
-        "schedule": crontab(minute="0", hour="9"),
+        "schedule": crontab(minute="0", hour="17"),
     },
 }
 
