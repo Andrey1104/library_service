@@ -5,7 +5,6 @@ from celery import shared_task
 
 from library.models import Borrowing
 from payment.models import Payment
-from user.models import User
 from utils.telegram_bot import send_message
 
 
@@ -41,7 +40,7 @@ def check_payment_status():
                 payment.save()
                 text = (
                     f"Your payment for the book "
-                    f"{payment.borrowing.book.title}"
+                    f"{payment.borrowing.book.title} "
                     f"has been received!"
                 )
-                send_message(message=text, chat_id=payment.user.telegram_id)
+                send_message(message=text, chat_id=payment.borrowing.user.telegram_id)
