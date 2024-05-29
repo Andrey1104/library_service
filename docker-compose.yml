@@ -48,7 +48,7 @@ services:
   celery-worker:
     build:
       context: .
-    command: "celery -A library_service worker -l info"
+    command: sh -c "celery -A library_service worker -l info"
     volumes:
       - .:/app
     depends_on:
