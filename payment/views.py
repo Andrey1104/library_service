@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.decorators import action
 
 from rest_framework.generics import ListAPIView, RetrieveAPIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 
@@ -13,7 +13,6 @@ from library.tasks import check_payment_status
 from library_service.settings import STRIPE_SECRET_KEY
 from payment.models import Payment
 from payment.serializers import PaymentSerializer, PaymentDetailSerializer
-from utils.telegram_bot import send_message
 
 stripe.api_key = STRIPE_SECRET_KEY
 
@@ -35,7 +34,7 @@ class PaymentViewSet(ListAPIView, RetrieveAPIView, GenericViewSet):
 
         return self.serializer_class
 
-    @action(detail=False, methods=['get'], url_path="success",)
+    @action(detail=False, methods=["get"], url_path="success", permission_classes=[AllowAny])
     def success(self, request):
         check_payment_status()
         return Response(status=status.HTTP_200_OK)
@@ -58,8 +57,8 @@ def create_stripe_session(payment: Payment):
         ],
         metadata={"book_id": payment.borrowing.book.id},
         mode="payment",
-        success_url='http://localhost:8000/api/success/',
-        cancel_url='http://localhost:8000/api/borrowings/',
+        success_url="http://127.0.0.1:9001/api/payment/success/",
+        cancel_url="http://127.0.0.1:9001/api/borrowings/",
         customer_email=payment.borrowing.user.email
     )
 
