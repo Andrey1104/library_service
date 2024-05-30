@@ -15,12 +15,15 @@ app.config_from_object("django.conf:settings", namespace="CELERY")
 
 app.autodiscover_tasks()
 
-app.conf.beat_schedule = {
-    "run-every-morning": {
-        "task": "library.tasks.overdue_notification",
-        "schedule": crontab(minute="0", hour="17"),
+app.conf.update(
+    beat_schedule={
+        "run-every-morning": {
+            "task": "library.tasks.overdue_notification",
+            "schedule": crontab(minute="0", hour="9"),
+        },
     },
-}
+    timezone='UTC',
+)
 
 
 @app.task(bind=True, ignore_result=True)
