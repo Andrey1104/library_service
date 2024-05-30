@@ -14,9 +14,12 @@ Docker
 Docker must be already installed
 
 Copy .env-sample to .env and populate with all required data.
+#### Note: superuser is created automatically with .env info if no users exist in database.
 
+```shell 
 docker-compose up --build 
-Note: superuser is created automatically with .env info if no users exist in database.
+```
+
 
 Getting access🔓
 Creating user: /api/user/register/
