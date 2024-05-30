@@ -41,15 +41,19 @@ async def handler(message: Message, command: CommandObject):
         await message.answer("You don't have any notifications.")
 
 
-def send_message(message: str, chat_id: int) -> None:
+async def send_message_async(message: str, chat_id: int) -> None:
     bot = Bot(
         token=TOKEN,
         default=DefaultBotProperties(parse_mode=ParseMode.HTML)
     )
     try:
-        asyncio.run(bot.send_message(
+        await bot.send_message(
             chat_id=chat_id,
             text=message
-        ))
+        )
     except Exception as error:
         print(error)
+
+
+def send_message(message: str, chat_id: int) -> None:
+    asyncio.run(send_message_async(message, chat_id))

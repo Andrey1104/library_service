@@ -15,12 +15,14 @@ from library.serializers import BookSerializer, BorrowingSerializer, BorrowingLi
 from library_service.settings import FINE_COEFFICIENT, STRIPE_SECRET_KEY
 from payment.models import Payment
 from payment.views import create_stripe_session
+from utils.permissions import IsAdminOrReadOnly
 from utils.telegram_bot import send_message
 
 
 class BookViewSet(viewsets.ModelViewSet):
     queryset = Book.objects.all()
     serializer_class = BookSerializer
+    permission_classes = (IsAdminOrReadOnly,)
 
 
 class BorrowingViewSet(
@@ -67,7 +69,7 @@ class BorrowingViewSet(
 
         text = (
             f"You have new borrowing \n"
-            f"Took \"{book}\" book.\n"
+            f"the book  \"{book}\".\n"
             f"Expected return on {return_date}.\n"
             f"Daily fee: {book.daily_fee} $"
         )
